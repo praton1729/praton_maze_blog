@@ -21,11 +21,12 @@
 title: Praton maze
 email: prathubaronia@oneplus.com
 description: >- # this means to ignore newlines until "baseurl:"
-        I blog what I learn everyday in my Linux kernel experiments
+        I blog about what I learn everyday in my Linux kernel experiments
+        in short readable articles.
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 #twitter_username: jekyllrb
-github_username:  praton1729
+github_username: praton1729
 
 gems:
    - jekyll-paginate

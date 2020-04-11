@@ -1,9 +1,9 @@
 #! /bin/bash
 
-echo "Building website...."
+echo "Building production website...."
 
-jekyll build
+JEKYLL_ENV=production bundle exec jekyll build
 
-echo "Publishing website"
+echo "Publishing production website"
 
 rsync -r _site/* blog_machine:/home/yynj07hrhveh/public_html
