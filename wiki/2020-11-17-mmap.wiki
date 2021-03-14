@@ -1,0 +1,174 @@
+= What is fucking mmap? =
+
+mmap is a system call that maps file/device or a memory region in a process's address space. It is a method of memory-mapped file I/O. It implements demand paging, because file contents are not read from disk directly and initially do not use physical RAM at all.
+
+== Some info on malloc:- ==
+
+* Malloc might call brk/sbrk or mmap based on the implementation and the size of the allocation.
+* brk/sbrk system calls adjust the size of the heap by moving the process's program break as shown below.
+
+[[File:/pics/process_memory_layout_1.png|frame|none|alt=|caption some alt text]]
+
+* If ASLR is turned off then there is no gap between the end of the uninitialized data and start of the heap
+* If ASLR is turned on then there is a random offset placed between them as shown below.
+* As show below the mmap section is placed between stack and heap.
+
+[[File:/pics/process_memory_layout_2.png|frame|none|alt=|caption some alt text]]
+
+== Advantages and disadvantages of using mmap? ==
+
+* Sharing memory within parents and children processes.
+
+== Difference between anonymous memory through malloc and mmap? ==
+
+On some systems using private anonymous mmaps is more efficient than using malloc for large blocks. This is not an issue with the GNU C Library, as the included malloc automatically uses mmap where appropriate.
+
+== Test code ==
+
+<source lang="c">/*
+ * =====================================================================================
+ *
+ *       Filename:  mmap_anonymous_allocation.c
+ *
+ *    Description:  Allocating anonymous memory through malloc and mmap
+ *                  Since mmap allocates the zeroed out memory and for malloc
+ *          we need to explicitly zero it out.
+ *                  So basically comparing the timings of both.
+ *
+ *        Version:  1.0
+ *        Created:  Tuesday 10 November 2020 07:04:42  IST
+ *       Revision:  none
+ *       Compiler:  gcc
+ *
+ *         Author:  PRATHU BARONIA (praton), prathu.baronia@oneplus.com
+ *   Organization:  N/A
+ *
+ * =====================================================================================
+ */
+
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <sys/mman.h>
+
+#define MB_SIZE (1 << 20)
+#define NSECS_PER_SEC 1000000000ULL
+
+#define CLOCK_IT(timespec_struct)
+clock_gettime(CLOCK_MONOTONIC_RAW,&timespec_struct)
+
+typedef struct timespec* my_timer;
+
+int print_time_taken(my_timer start, my_timer end){
+    unsigned long long delta;
+    delta = NSECS_PER_SEC * (end->tv_sec - start->tv_sec);
+    delta += (end->tv_nsec - start->tv_nsec);
+    printf("Experiment took %f secs\n", (double)(delta /
+(double)NSECS_PER_SEC));
+    return 0;
+}
+
+int do_malloc_experiment(int buf_size_bytes){
+    void *malloc_buf;
+    struct timespec start, end;
+
+    CLOCK_IT(start); 
+    malloc_buf = malloc(buf_size_bytes); 
+    memset(malloc_buf, 0, buf_size_bytes);
+    CLOCK_IT(end);
+    printf("Malloc allocation and zeroing:\n");
+    print_time_taken(&start, &end);
+    free(malloc_buf);
+    return 0;
+}
+
+int do_mmap_experiment(int buf_size_bytes){
+    void *mmap_buf;
+    struct timespec start, end;
+
+    CLOCK_IT(start); 
+    mmap_buf = mmap(NULL, buf_size_bytes, PROT_READ|PROT_WRITE,
+MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    memset(mmap_buf, 1, buf_size_bytes);
+    CLOCK_IT(end);
+    printf("Mmaping and writing 1:\n");
+    print_time_taken(&start, &end);
+    munmap(mmap_buf, buf_size_bytes);
+    return 0;
+}
+int main(int argc, char* argv[])
+{
+    int ret = 0;
+    int buf_size = atoi(argv[1]);
+    int buf_size_bytes = buf_size * MB_SIZE;
+
+    printf("Doing experiment for %d MB anonymous allocation\n\n", buf_size);
+
+    ret = do_malloc_experiment(buf_size_bytes);
+    assert(ret==0);
+
+    printf("------------Break-----------\n");
+
+    ret = do_mmap_experiment(buf_size_bytes);
+    assert(ret==0);
+
+    return 0;
+}</source>
+== Results ==
+
+<pre class="md">Doing experiment for 100 MB anonymous allocation
+
+Malloc allocation and zeroing:
+Experiment took 0.055975 secs
+------------Break-----------
+Mmaping and writing 1:
+Experiment took 0.045770 secs
+
+Doing experiment for 100 MB anonymous allocation
+
+Malloc allocation and zeroing:
+Experiment took 0.055472 secs
+------------Break-----------
+Mmaping and writing 1:
+Experiment took 0.045293 secs
+
+Doing experiment for 100 MB anonymous allocation
+
+Malloc allocation and zeroing:
+Experiment took 0.075666 secs
+------------Break-----------
+Mmaping and writing 1:
+Experiment took 0.044568 secs
+
+Doing experiment for 100 MB anonymous allocation
+
+Malloc allocation and zeroing:
+Experiment took 0.070488 secs
+------------Break-----------
+Mmaping and writing 1:
+Experiment took 0.044505 secs
+
+Doing experiment for 100 MB anonymous allocation
+
+Malloc allocation and zeroing:
+Experiment took 0.075289 secs
+------------Break-----------
+Mmaping and writing 1:
+Experiment took 0.045685 secs
+</pre>
+== Conclusions ==
+
+Test code suggests (for x86_64 right now):- - As the allocation size for anonymous memory increases the allocation and zeroing timing for malloc can shoot up and vary a lot but  for mmap there is not much variation(can be supported by data). - Since malloc will not really allocate the pages unless they are written to  so we need to write 0 to them explicitly. - For mmap, when we map a file the data is not fetched until we start editing it i.e. demand paging. - In case of the anonymous memory allocation the data is initialized as zero. - Using mmap in place of malloc makes the code less portable.
+
+=== Tips: ===
+
+* The syscalls called by malloc can be checked by running the program with strace.
+
+=== References:- ===
+
+* https://notes.shichao.io/tlpi/ch7/
+* https://sploitfun.wordpress.com/2015/02/11/syscalls-used-by-malloc/
+* Linus's rant on mmap: http://lkml.iu.edu/hypermail/linux/kernel/0004.0/0728.html
+

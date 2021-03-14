@@ -1,0 +1,347 @@
+= Problem Statement =
+
+* Zeroing of THP happens in 4K chunks. We need to explore the possibility of doing that as huge page mapping itself.
+
+=== Questions to answer: ===
+
+* The difference between vmap and kmap, kmap_atomic.
+* Is there a need for a special clear_huge_page assembly routine for arm64.
+** Refs for arm64 assembly: https://github.com/Siguza/ios-resources/blob/master/bits/arm64.md
+** Other refs in Workspace/Work/Wiki_Articles/Guides/refs/.
+
+=== Things to profile ===
+
+* Profiling the default procedure of breaking down hugepage into 4KB pages and zeroing them individually.
+* Profiling the huge page mapping with a vmap call to map 2MB space and memsetting it to zero.
+* Profiling the huge page mapping with a kmap_hugepage_atomic and memsetting it to zero.
+* Profile the mapping time and zeroing time in all cases.
+
+=== Analysis till now: ===
+
+===== Below points are vaild only for kernel version 4.19(OP8 19811) =====
+
+* kmap and kmap_atomic don't have much difference in case of arm64 for 4.19 kernel.
+* In case of kmap execution we might sleep and then return the page's virtual address.
+* In case of kmap_atomic we disable preemption and pagefaults and return the page's virtual address.
+
+===== Below points are vaild only for kernel version 4.14(OP7Pro 18821_Q) =====
+
+=== Patch ===
+
+==== V1 ====
+
+* Since highmem is not really needed in 64 bit we don't differentiate in highmem and lowmem.
+* So we just simply map the hugepage with kmap_atomic and memset it to zero.
+* Needs ageing, profiling and fail safe checks.
+* Shift everything to OP7Pro. Images and setup.
+** (Pending) Create a standalone THP enabling patch.
+** (Pending) Create a clear_huge_page altering patch.
+** Started a KASAN enabled build.
+** The build is failing because of <code>memplus_core.c</code> keeps on resetting after edits and make picks up the unedited file which causes pointer type casting errors.
+*** Solved this : The kernel uses an out of tree source for the coretech in 4.14 so the changes were supposed to be made in the oneplus directory inside <code>android/kernel/oneplus</code> and not in the <code>android/kernel/msm-4.14/drivers/oneplus/coretech</code> path.
+*** The build is successfully completing now.
+* The device is booting successfully with the current patch.
+* Need to add logs in the current patch to understand whether that function is being called or not.
+** Should print the logs in selective iterations like at every 15th or 20th call to the function.
+*** Printing the info statement works using KERN_INFO tag.
+*** Kernel uses the patched code to clear out hugepages.
+** Adding logs to each iteration will clobber the log as well as might create a deadlock kind of situation since a lock is acquired to log statements and that might create a resource contingency problem between processors.
+* Need to understand the <code>pagefaultdisable(...)</code> and <code>preemptdisable(...)</code> functions to understand whether avoiding <code>kmap_atomic(...)</code> call multiple times with <code>kmap_hugepage_atomic(...)</code> function would bring significant improvement.
+* The above statement comes in picture since <code>kmap_atomic(...)</code> in <code>arm64</code> doesn't do much and just gets the virtual address of a (low | high)mem page because there is no need of highmem in 64 bit processor where the processor can address the whole memory.
+* Need to profile both the cases to understand and justify the %age improvement if found.
+* Profiled both the cases and found 64% improvement in the timing with the patch.
+* Need to comment out the <code>might_sleep(...)</code> and <code>cond_resched(...)</code> calls to narrow down the timing analysis.
+** Started the build with the above commented out.
+** Observed the same scale of timing with this as well.
+** Added more logs to confirm the correct build.
+** The build has been confirmed. The timing is almost the same(~0.2ms).
+* The above will yield whether this latency is due to multiple <code>barrier(...)</code> function calling.
+** Seems now that it is due to the large number of barrier calls in the default method of zeroing hugepages.
+* Add a <code>sysfs</code> parameter which can be used to tweak the path taken to clear out hugepages.
+** This will make profiling easier by using just only one build instead of two.
+** The parameter can be written with <code>default</code> to enable the default path and written with <code>hugepage_map</code> to enable the patch path.
+** Need to create an empty kernel module which can read write and to the parameter.
+** This parameter can then be read by the <code>clear_huge_page(...)</code> and then can choose the path accordingly.
+*** Decided <code>0</code> for default path and <code>1</code> for the patched path.
+** Create an empty module first which just sets and gets a parameter.
+*** Created a <code>simple_hugepage_helper_module</code> test module which sets and gets a parameter.
+*** Started the build with this module enabled.
+*** Flash and check whether this module is loaded or not with <code>lsmod</code>.
+**** Checked and couldn't locate the module. Maybe not loaded in the kernel.
+** Then link this module to the <code>clear_huge_page(...)</code> function so that we can use the parameter to make decisions.
+* Use <code>function tracer</code> to determine time more accurately as compared to measuring deltas by using <code>printk(...)</code> for measuring time taken by <code>clear_huge_page(...)</code> function.
+** For the default method to clear out a hugepage the time taken is : 473.802us ( overhead because of ftrace)
+** For the patched method to clear out a hugepage the time taken is : 168.229us ( overhead because of ftrace)
+** %age improvement is : '''~64%'''
+* Use the variable <code>pages_per_hugepage</code> instead of <code>HPAGE_PMD_SIZE</code> macro.
+
+=== TODO Analysis ===
+
+* Check whether at 100us(patch ftrace time) level can we disable preemption and pagefault.
+** Is there a need to disable preemption and pagefault for kmap_atomic in 64 bit case where we are just doing an arithmetic calculation.
+* Check <code>cond_resched(...)</code> documentation and timing constraints. Look into RTLinux parts as well.
+* Prepare a list of fail safe checks that need to be made for the patch for V2.
+* Create the patch from <code>memory.c</code> instead of overwriting the <code>clear_huge_page(...)</code> definition under the <code>arm64</code> arch directory.
+** Need to check applicability to all 64 bit architectures for this patch.
+* Preemption can be enabled in absence of highmem since no per CPU variable is being manipulated unlike in the case of highmem where kmap slots were being handled.
+* Is pagefault disabling necessary here?
+** Since top level code might call <code>pagefault_disable(...)</code> upon an anonymous page fault to stop another page fault from occurring during servicing of the first page fault.
+** Need to check page fault handler code for double fault handling situation.
+** Couldn't locate the exact piece of code that calls <code>pagefault_disable(...)</code> in <code>do_page_fault(...)</code> when one fault is being serviced.
+** But it seems like that when a page table entry is being made a page table lock is taken up and the double fault situation is avoided since the rest of the threads will wait on the lock and check if page table entry is present or not.
+** Seems like pagefault disabling is not necessary here for now.
+*** Need more insight on this though.
+* Check all locations where <code>kmap_atomic</code> is called. Can a new simple API which just calls <code>page_address()</code> replace it.
+** Can't be replaced at all locations, check <code>mm/page_poison.c</code>.
+*** Looks like a per_cpu variable manipulation.
+*** Check the difference between <code>local_irq_save(...)</code> and <code>preempt_disable(...)</code>.
+** A strong hunch that <code>kmap_atomic(...)</code> is not needed in 64 bit cases.
+* Check the build with <code>page_address(...)</code> in place of <code>kmap_atomic(...)</code> which has been created on the build server.
+** Checked with ftrace. The timing is similar(~170us).
+** Create patch and share it with Chintan Pandya.
+* (Optional)Difference between <code>spin_lock_irq_save(...)</code> and <code>spin_lock(...)</code>.
+
+==== Preparation for sending to Upstream ====
+
+* Create a patch according to the upstream guidelines.
+* If okay then send to Chintan for review.
+** Need to send it to him after placing in the fail-safe checks.
+** Sent the sample patch to him.
+* Check <code>git send-email</code> and <code>git format-patch -1</code> commands to email and to generate properly formatted patch.
+** Created a properly formatted patch using the above command.
+** Have setup the mutt client to send the patch to upstream from the oneplus emailid.
+*** Use <code>mutt -H &lt;patch-file&gt;</code>.
+* Checkout <code>checkpatch.pl</code> for code formatting and run <code>get_maintainer.pl</code> on the patch file to generate a list of relevant people to send the patch to.
+** The <code>get_maintainer.pl</code> script has some problems with directly feeding the patch from stdin. Use <code>-f</code> and give path to patch file.
+* Add RFC(review for comment) to the patch mail for easier feedback and as little backlash as possible.
+* Compile the patch with latest kernel tree to check for build issues.
+** No build issues found.
+** Commands for cross compilation and emulation are in Compilation and Emulation note.
+** Unable to emulate using <code>qemu-system-aarch64</code>.
+*** The program just gets stuck without any output. Need to solve this.
+*** Need to create a simple initramfs for bootup checks.
+* Create a new patch with <code>page_address(...)</code> replacing the <code>kmap_atomic(...)</code> calls.
+** Sent for review to Chintan Pandya.
+** Send for possible testing on OP8 to Bin Zhong.
+*** Will require some time on his end since it requires more than one patch to make THP work along with this.
+*** Create a jenkins build to make it easy for him.
+* Sent the patch to upstream maintainers
+
+==== V1 internal review ====
+
+* Removed dead code and made the patch to be used only in situation where highmem is not configured i.e. 64-bit archs.
+** Need to make sure that highmem is not configured in 64-bit archs.
+* Added <code>Reported-by</code> tag in the patch corresponding to Chintan's name.
+* Added further explanation in the commit message.
+* Removed my title from the patch email.
+
+==== V1 feedback ====
+
+* Feedback from Michael Hock
+** This is an old kernel. Do you see the same with the current upstream kernel?
+*** Can't test it with the latest kernel.
+** Btw. 60% improvement only from dropping barrier sounds unexpected to me. Are you sure this is the only reason?
+** c79b57e462b5 (&quot;mm: hugetlb: clear target sub-page last when clearing huge page&quot;) is already 4.14 AFAICS, is it possible that this is the effect of this patch? Your patch is effectively disabling this optimization for most workloads that really care about it.
+** I strongly doubt` that hugetlb is a thing on 32b kernels these days. So this really begs for more data about the real underlying problem IMHO.
+
+===== Analysis for v2 =====
+
+* Changed <code>clear_user_highpage(...)</code> code to directly call <code>page_address(...)</code>.
+* On profiling the new patch I found <code>clear_huge_page(...)</code> now executes in 70 us!!('''Unbelievable''').
+* <code>clear_user_highpage(...)</code> not available for ftracing in <code>available_filter_function</code>.
+** <code>\_\_cpu_clear_user_page()</code> takes about ~1 us.
+* The device was found to shutdown after some time :-
+** Disabled KASAN for all the builds to avoid gui glitches.
+** Boot test and monitor log check stability for <code>clear_user_highpage(...)</code> patched build.
+** Checked dmesg, there is no kernel crash.
+** Most probably a system crash from a qcom daemon named adscprcpd.
+*** This daemon keeps on restarting.
+* Build status:
+** THP_disabled_default : Created
+** THP_disabled_v2_build : Created.
+** THP_enabled_default : Created
+** THP_enabled_v1_build : Created.
+** THP_enabled_v2_build : Created
+* Disable THP and check the <code>clear_user_highpage(...)</code> patched build :-
+** for stability by monitoring logs.
+** Turn off gold cores and put silver core to max frequency.
+** for profiling by doing a malloc test for anon allocation vs default build.
+** For allocating 100MB THP disabled default build takes ~96 us.
+** For allocating 100MB THP disabled v2 build takes ~96 us.
+** Not much difference observed.
+* Take 3 builds base, v1, v2 build.
+** base build(i.e. THP enabled default build) created.
+** v1 build in process.
+** v2 build created.
+** Turned off gold cores and put silver core to max frequency.
+** Do clear_huge_page ftrace profile again.
+*** Check whether timing is in order of base &gt; v2 &gt; v1.
+*** Base time = ~315 us
+*** v2 time = ~244 us
+*** v1 time = ~157 us
+** The ftrace readings even after gold core switched off are not consistent.
+*** Maybe there is some issue with the test setup.
+* Measure barrier cost vs zeroing of single page.
+* Create v2 and share all the data with mean and standard deviation.
+** And mention that v1 is consistent and v2 is not.
+** Ask questions in v2.
+* Need to conduct experiment with more number of iterations(~100 iters).
+* Order of measurement THP_enabled_default --&gt; THP_enabled_v1_build --&gt; THP_enabled_v2_build
+* Experiment method:-
+** Switch off gold core &amp; set silver core to max freq --&gt; Switch tracing on --&gt; stop android --&gt; execute malloc test 20 times with 5 secs sleep(total ~100secs).
+*** <code>/data/switch_off_gold_core_and_set_silver_cores_to_max_frequency.sh; /data/tracing_clear_huge_page.sh; stop;   /data/execute_malloc_test.sh</code>
+*** <code>cat /sys/kernel/debug/tracing/trace &gt; /data/trace_under_controlled_conditions_100secs</code>
+*** <code>adb pull /data/trace_under_controlled_conditions_100secs .</code>
+*** <code>cat trace_under_controlled_conditions_100secs | grep 'clear_huge_page' | awk '{print $3}' | tr '\n' ',' | copy</code>
+** THP_enabled_default :
+*** Mean : 270.49784078212
+*** Std deviation : 67.071327538122
+** THP_enabled_v1_build :
+*** Mean : 124.12496573209
+*** Std deviation : 27.829607576216
+** THP_enabled_exp_v2_build :
+*** Mean : 219.23875914634
+*** Std deviation : 48.103045077791
+* The above data is not trustworthy since CPU6 was made offline but the malloc test was run with affinity on cpu6.
+** So switched off the silver core except CPU0 and switched off gold core except CPU6.
+** Set both CPU0 and CPU6 to max frequencies.
+* Need to conduct experiment with more number of iterations(~100 iters).
+** Switch off gold core(except CPU6) &amp; switch off silver core(except CPU0) and set CPU(0|6) to max freq --&gt; Switch tracing on --&gt; stop android --&gt; execute malloc test 20 times with 5 secs sleep(total ~100secs).
+*** <code>/data/switch_off_core_1_2_3_4_5_7_and_set_other_cores_to_max_freq.sh; /data/tracing_clear_huge_page.sh; stop;sleep 5;   /data/execute_malloc_test.sh</code>
+*** <code>cat /sys/kernel/debug/tracing/trace &gt; /data/trace_under_controlled_conditions_100secs</code>
+*** <code>adb pull /data/trace_under_controlled_conditions_100secs .</code>
+*** <code>cat trace_under_controlled_conditions_100secs | grep 'clear_huge_page()' | grep -e ' 0) ' | awk '{print $3}' | stats</code>
+* Publish results again with new data in RFC v2.
+* Create a core wise table for CPU0 and CPU6 of timing analysis.
+** THP_enabled_default(for 1hr):
+*** <code>clear_huge_page()</code> count : 110
+*** CPU0
+**** Mean : 301.406(Single reading)
+**** Std deviation : N/A
+*** CPU6
+**** Mean : 290.66702752294
+**** Std deviation : 75.958489094338
+** THP_enabled_v1_build(for 1hr) :
+*** <code>clear_huge_page()</code> count : 188
+*** CPU0
+**** Mean : 153.36228409091
+**** Std deviation : 47.381298048134
+*** CPU6
+**** Mean : 108.03090816327
+**** Std deviation : 31.707576326998
+** THP_enabled_exp_v2_build(for 1hr) :
+*** iter_1
+**** <code>clear_huge_page()</code> count : 124
+**** CPU0
+***** Mean : 194.227125
+***** Std deviation : 79.614485045361
+**** CPU6
+***** Mean : 295.58280882353
+***** Std deviation : 57.514488971516
+*** iter_2
+**** <code>clear_huge_page()</code> count : 185
+**** CPU0
+***** Mean : 188.01588461538
+***** Std deviation : 61.687678558748
+**** CPU6
+***** Mean : 296.05037179487
+***** Std deviation : 44.945581407454
+* Check and compare configs for all build since the above data doesn't make sense.
+** Found different config for base build than v2.
+** Same config for v1 and v2.
+** Building again to compare configs.
+* After building exactly same configs.
+** THP_enabled_default(for 1hr):
+*** <code>clear_huge_page()</code> count : 172
+*** malloc time for 100 MB: 15224 us
+*** CPU0
+**** calls : 79
+**** Mean : 329.706
+**** Std deviation : 113.998
+*** CPU6
+**** calls : 93<br />
+
+**** Mean : 313.429
+**** Std deviation : 81.8397
+** THP_enabled_v1_build(for 1hr) :
+*** <code>clear_huge_page()</code> call count : 196
+*** malloc time for 100 MB: 7398 us
+*** CPU0
+**** calls : 85
+**** Mean : 171.662
+**** Std deviation : 76.8697
+*** CPU6
+**** calls : 111
+**** Mean : 101.588
+**** Std deviation : 24.5146
+** THP_enabled_exp_v2_build(for 1hr) :
+*** <code>clear_huge_page()</code> call count : 189
+*** malloc time for 100 MB: 15777 us
+*** CPU0
+**** calls : 99
+**** Mean : 197.713
+**** Std deviation : 80.7591
+*** CPU6
+**** calls : 90
+**** Mean : 278.026
+**** Std deviation : 33.1782
+* Do anon 100 MB allocation time comparison again on THP_disabled_default and with v2 patch.
+** default : 45589 us
+** v2 : 45266 us
+* Did the profile for v2 on x86_64 on my backup laptop(4 CPUs).
+** Switched off CPU-1, 2 and 3 and set the CPU-0's scaling min and max freq to max possible.
+** Still the results are inconsistent with a variation of 100 us on a single core.
+*** Sometimes more than 100 us where the reading goes into 5000-10000us.
+*** And ftrace marks those readings differently.
+* Enabling DDR frequency control for 8150 (clear_huge_page profile) - Base: - CPU0: - calls : 95 - Mean : 237.383 - Std dev : 31.288 - CPU6 - calls : 61 - Mean : 258.065 - Std dev : 19.97 - v1<br />
+- CPU0: - calls : 80 - Mean : 112.298 - Std dev : 0.36 - CPU6 - calls : 83 - Mean : 71.238 - Std dev : 13.7819 - v2<br />
+- CPU0: - calls : 69 - Mean : 218.911 - Std dev : 54.306 - CPU6 - calls : 101 - Mean : 241.522 - Std dev : 19.3068
+* Do malloc test on base, v1 and v2.
+** Send Michal Hocko the data for simple malloc test executed on all the builds for 15 mins.
+*** Base : N min max sum mean stddev 100 13896 14414 1.41355e+06 14135.5 115.493
+*** v1 : N min max sum mean stddev 100 4132 5404 498675 4986.75 132.94
+*** v2 : N min max sum mean stddev 100 13084 13516 1.32955e+06 13295.5 91.1573
+* Do the serial and random traversal test on arm64 and x86_64
+* arm 64
+** Both done through for loops
+*** Random/reverse order:
+**** Mean : 17047.7
+**** Std dev : 154.262 -Serial order:
+**** Mean : 12374.5
+**** Std dev : 156.318
+** Serial when done through memset instead of for loop.
+*** Random/reverse order:
+**** Mean : 17047.7
+**** Std dev : 154.262 -Serial order:
+**** Mean : 12374.5
+**** Std dev : 156.318
+* x86_64
+** Both done through for loops
+** Random/reverse and serial take almost the same time with for loops.
+*** With for loops reversed almost the same, but need to profile just for justifying.
+** Serial when done through memset instead of for loop.
+*** Random/reverse order:
+**** Mean : 17047.7
+**** Std dev : 154.262 -Serial order:
+**** Mean : 12374.5
+**** Std dev : 156.318
+* Write a simple patch for v2 to change the zeroing out hugepage algo with keeping (+|-)0.5MB cache hot.
+** Let x be the faulting address.
+** If x + 0.5 &lt; 2 MB then zero out addresses in [x+0.5, 2MB].
+** Otherwise zero out addresses in [0, x+0.5].
+* Do the testing for serial, random and memset profiling for 8150 and x86_64 with the test code sent by Chintan.
+** arm64
+*** Oneshot N min max mean stddev 100 3315 3587 3389.26 79.1377
+*** Forward N min max sum mean stddev 100 8513 9335 887616 8876.16 172.699
+*** Reverse N min max sum mean stddev 100 18033 18546 1.81576e+06 18157.6 111.713
+** x86_64( backup Hp laptop )
+*** Oneshot N min max sum mean stddev 100 8452 9764 866762 8667.62 207.056
+*** Forward N min max sum mean stddev 100 9969 12981 1.02598e+06 10259.8 351.596
+*** Reverse N min max sum mean stddev 100 9295 10757 955624 9556.24 211.331
+* 100MB anon malloc test for v2:
+** arm64 takes around 5095 us (just a rough figure, need to get mean and std deviation)
+
+===== TODO =====
+
+* Figure out the fail safe checks that need to be added to avoid wrong operations under wrong calling of this function.
+

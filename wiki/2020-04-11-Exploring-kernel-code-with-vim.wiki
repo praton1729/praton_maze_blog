@@ -1,0 +1,341 @@
+== Problem statement ==
+
+Since the Linux kernel has a huge code database we need an efficient way to browse the source code in vim. For example we want to jump to function definitions, function calls, macro definitions etc. inside the code used for cross compiling for a particular architecture. Here I have taken the example of arm64 since that is the architecture I deal with everyday. This finer details in this article would make sense after significant exploration of kernel code.
+
+Main differences between Linux kernel and regular C project (from developer's point of view) are next:
+
+* kernel is very big project (so you should choose which code to index)
+* it has architecture dependent code (and you are only interested in one specific architecture at a time; other architectures shouldn't be indexed)
+* it has very specific [https://www.kernel.org/doc/Documentation/process/coding-style.rst coding style] you should stick to (and vim should be configured to display code accordingly)
+* it doesn't use C standard library, but instead has it's own similar routines (so your index tool shouldn't index libc headers)
+
+== Solution ==
+
+== Installing indexing tools ==
+
+To navigate kernel code I would advise <code>cscope</code> and <code>ctags</code> tools. To install them run next command:
+
+<pre>$ sudo aptitude install cscope exuberant-ctags</pre>
+A little explanation:
+
+* <code>cscope</code>: will be used to navigate the code (switch between functions, etc.). It's able to jump to symbol definition, find all symbol usages, etc.
+* <code>ctags</code>: needed for <code>Tagbar</code> plugin (will be discussed further) and for <code>Omni completion</code> (auto completion mechanism in vim); can be also used for navigation. <code>ctags</code> is not as a good choice for C code navigation as cscope, because <code>ctags</code> is only able to jump to symbol definition (not to its callers).
+
+== Creating index database ==
+
+Now you should index your kernel source files. There are 2 approaches here: create index manually or use available script in kernel. If you are not sure which way is best for you, I recommend to go with kernel script, as it does a lot of neat tricks behind the scenes (like ignoring non-built sources and moving header files on top of the result list).
+
+But first of all, configure and build the kernel for your architecture/board, as built files can be used later to improve indexing process.
+
+=== Indexing with <code>scripts/tags.sh</code> ===
+
+Kernel has quite good script (<code>scripts/tags.sh</code>) for creating kernel index database. One should use <code>make cscope</code> and <code>make tags</code> rules to create index, instead of running that script directly.
+
+Example:
+
+<pre>$ make O=. ARCH=arm SUBARCH=omap2 COMPILED_SOURCE=1 cscope tags</pre>
+where
+
+* <code>O=.</code> - use absolute paths (useful if you want to load created cscope/ctags index files outside of kernel directory, e.g. for development of out-of-tree kernel modules). If you want to use relative paths (i.e. you're gonna do development only in kernel dir), just omit that parameter
+* <code>ARCH=...</code> - select CPU architecture to be indexed. See directories under <code>arch/</code> for reference. For example, if <code>ARCH=arm</code>, then <code>arch/arm/</code> directory will be indexed, the rest of <code>arch/*</code> directories will be ignored
+* <code>SUBARCH=...</code> - select sub-architecture (i.e. board-related files) to be indexed. For example, if <code>SUBARCH=omap2</code>, only <code>arch/arm/mach-omap2/</code> and <code>arch/arm/plat-omap/</code> directories will be indexed, the rest of machines and platforms will be ignored.
+* <code>COMPILED_SOURCE=1</code> - index only compiled files. You are usually only interested in source files used in your build (hence compiled). If you want to index also files that weren't built, just omit this option.
+* <code>cscope</code> - rule to make cscope index
+* <code>tags</code> - rule to make ctags index
+
+=== Indexing manually ===
+
+Kernel script (<code>tags.sh</code>) might not work correctly or you may want to have more control over indexing process. In those cases you should index kernel sources manually.
+
+Insights on manual indexing were taken from [http://cscope.sourceforge.net/large_projects.html here].
+
+First you need to create <code>cscope.files</code> file which would list all files you want to index. For example, I'm using next commands to list files for ARM architecture (<code>arch/arm</code>), and particularly for OMAP platform (excluding rest of platforms to keep navigation easy):
+
+<!-- language: sh -->
+<pre>find    $dir                                          \
+        -path &quot;$dir/arch*&quot;               -prune -o    \
+        -path &quot;$dir/tmp*&quot;                -prune -o    \
+        -path &quot;$dir/Documentation*&quot;      -prune -o    \
+        -path &quot;$dir/scripts*&quot;            -prune -o    \
+        -path &quot;$dir/tools*&quot;              -prune -o    \
+        -path &quot;$dir/include/config*&quot;     -prune -o    \
+        -path &quot;$dir/usr/include*&quot;        -prune -o    \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name &quot;*.[chsS]&quot; -print &gt; cscope.files
+find    $dir/arch/arm                                 \
+        -path &quot;$dir/arch/arm/mach-*&quot;     -prune -o    \
+        -path &quot;$dir/arch/arm/plat-*&quot;     -prune -o    \
+        -path &quot;$dir/arch/arm/configs&quot;    -prune -o    \
+        -path &quot;$dir/arch/arm/kvm&quot;        -prune -o    \
+        -path &quot;$dir/arch/arm/xen&quot;        -prune -o    \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name &quot;*.[chsS]&quot; -print &gt;&gt; cscope.files
+find    $dir/arch/arm/mach-omap2/                     \
+        $dir/arch/arm/plat-omap/                      \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name &quot;*.[chsS]&quot; -print &gt;&gt; cscope.files</pre>
+For x86 architecture (<code>arch/x86</code>) you can use something like this:
+
+<!-- language: sh -->
+<pre>find    $dir                                          \
+        -path &quot;$dir/arch*&quot;               -prune -o    \
+        -path &quot;$dir/tmp*&quot;                -prune -o    \
+        -path &quot;$dir/Documentation*&quot;      -prune -o    \
+        -path &quot;$dir/scripts*&quot;            -prune -o    \
+        -path &quot;$dir/tools*&quot;              -prune -o    \
+        -path &quot;$dir/include/config*&quot;     -prune -o    \
+        -path &quot;$dir/usr/include*&quot;        -prune -o    \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name &quot;*.[chsS]&quot; -print &gt; cscope.files
+find    $dir/arch/x86                                 \
+        -path &quot;$dir/arch/x86/configs&quot;    -prune -o    \
+        -path &quot;$dir/arch/x86/kvm&quot;        -prune -o    \
+        -path &quot;$dir/arch/x86/lguest&quot;     -prune -o    \
+        -path &quot;$dir/arch/x86/xen&quot;        -prune -o    \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name &quot;*.[chsS]&quot; -print &gt;&gt; cscope.files</pre>
+Where <code>dir</code> variable can have one of next values:
+
+* <code>.</code>: if you are gonna work only in kernel source code directory; in this case those commands should be run from root directory of kernel source code
+* '''absolute path to your kernel source code directory''': if you are gonna develop some out-of-tree kernel module; in this case script can be run from anywhere
+
+I'm using first option (<code>dir=.</code>), because I'm not developing any out-of-tree modules.
+
+Now when <code>cscope.files</code> file is ready, we need to run actual indexing:
+
+<pre>$ cscope -b -q -k</pre>
+Where <code>-k</code> parameter tells <code>cscope</code> to not index C standard library (as kernel doesn't use it).
+
+Now it's time to create <code>ctags</code> index database. To accelerate this stage, we're gonna reuse already created <code>cscope.files</code>:
+
+<pre>$ ctags -L cscope.files</pre>
+Ok, <code>cscope</code> and <code>ctags</code> index databases are built, and you can remove <code>cscope.files</code> file, as we don't need it anymore:
+
+<pre>$ rm -f cscope.files</pre>
+Next files contain index databases (for <code>cscope</code> and <code>ctags</code>):
+
+<pre>- cscope.in.out
+- cscope.out
+- cscope.po.out
+- tags</pre>
+Keep them in root of kernel sources directory.
+
+== vim plugins ==
+
+'''NOTE''': Further I show how to use ''pathogen'' for handling Vim plugins. But now that Vim 8 is released, one can use [https://shapeshed.com/vim-packages/ native package loading] for the same purpose.
+
+Next we are gonna install some plugins for vim. To have a better grasp on it, I encourage you to use '''pathogen''' plugin. It allows you to just <code>git clone</code> vim plugins to your <code>~/.vim/bundle/</code> and keep them isolated, rather than mixing files from different plugins in <code>~/.vim</code> directory.
+
+Install '''pathogen''' like it's described [https://github.com/tpope/vim-pathogen here].
+
+Don't forget to do next stuff (as it's described at the same link):
+
+<blockquote>Add this to your <code>vimrc</code>:
+</blockquote>
+<blockquote><pre>execute pathogen#infect()</pre></blockquote>
+<blockquote>If you're brand new to Vim and lacking a <code>vimrc</code>, <code>vim ~/.vimrc</code> and paste in the following super-minimal example:
+</blockquote>
+<blockquote><pre>execute pathogen#infect()
+syntax on
+filetype plugin indent on</pre></blockquote>
+== Installing cscope maps for vim ==
+
+Vim already has cscope support in it (see <code>:help cscope</code>). You can jump to symbol or file using commands like <code>:cs f g kfree</code>. It's not so convenient though. To accelerate things you can use shortcuts instead (so you can put your cursor on some function, press some key combination and jump to function). In order to add shortcuts for cscope you need to obtain <code>cscope_maps.vim</code> file.
+
+To install it using '''pathogen''' you can just clone [https://github.com/joe-skb7/cscope-maps this] repo to your <code>~/.vim/bundle</code>:
+
+<pre>$ git clone https://github.com/joe-skb7/cscope-maps.git ~/.vim/bundle/cscope-maps</pre>
+Now you should be able to navigate between functions and files in vim using shortcuts. Open some kernel source file, put your keyboard cursor on some function call, and press <kbd>Ctrl</kbd>+<kbd>&lt;/kbd&gt; followed by <kbd>g</kbd>. It should bring you to the function implementation. Or it can show you all available function implementations, then you can choose which one to use: [http://i.stack.imgur.com/mckjb.png [[File:http://i.stack.imgur.com/mckjb.png|cscope-struct]]].
+
+For the rest of key mappings see [https://github.com/joe-skb7/cscope-maps/blob/master/plugin/cscope_maps.vim#L52 cscope_maps.vim] file.
+
+You can also use commands in vim like:
+
+<pre>:cs f g kmalloc</pre>
+See <code>:help cscope</code> for details.
+
+== ctags note ==
+
+ctags still can be useful for navigation, for example when looking for some <code>#define</code> declaration. You can put cursor on this define usage and press <kbd>g</kbd> followed by <kbd>Ctrl</kbd>+<kbd>]</kbd>. See [https://stackoverflow.com/a/1749621/3866447 this answer] for details.
+
+== cscope note ==
+
+Next trick can be used to find structure '''declaration''' in kernel:
+
+<pre>:cs f t struct device {</pre>
+Note that above command relies on specific struct declaration style (used in kernel), so we know that struct declaration is always has this form: <code>struct some_stuct {</code>. This trick might not work in projects with another coding style.
+
+== out-of-tree modules development note ==
+
+If you are developing out-of-tree module, you will probably need to load <code>cscope</code> and <code>ctags</code> databases from your kernel directory. It can be done by next commands in vim (in command mode).
+
+Load external cscope database:
+
+<pre>:cs add /path/to/your/kernel/cscope.out</pre>
+Load external ctags database:
+
+<pre>:set tags=/path/to/your/kernel/tags</pre>
+= vimrc =
+
+Some modifications need to be done to your <code>~/.vimrc</code> as well, in order to better support kernel development.
+
+First of all, let's highlight 81th column with vertical line (as kernel coding requires that you should keep your lines length at 80 characters max):
+
+<pre>&quot; 80 characters line
+set colorcolumn=81
+&quot;execute &quot;set colorcolumn=&quot; . join(range(81,335), ',')
+highlight ColorColumn ctermbg=Black ctermfg=DarkRed</pre>
+Uncomment second line if you want to make 80+ columns highlighted as well.
+
+Trailing spaces are prohibited by kernel coding style, so you may want to highlight them:
+
+<pre>&quot; Highlight trailing spaces
+&quot; http://vim.wikia.com/wiki/Highlight_unwanted_spaces
+highlight ExtraWhitespace ctermbg=red guibg=red
+match ExtraWhitespace /\s\+$/
+autocmd BufWinEnter * match ExtraWhitespace /\s\+$/
+autocmd InsertEnter * match ExtraWhitespace /\s\+\%#\@&lt;!$/
+autocmd InsertLeave * match ExtraWhitespace /\s\+$/
+autocmd BufWinLeave * call clearmatches()</pre>
+== Kernel coding style ==
+
+To make vim respect kernel coding style, you can pull ready to use plugin: [https://github.com/vivien/vim-linux-coding-style/commits/master vim-linux-coding-style].
+
+== Useful plugins ==
+
+Next plugins are commonly used, so you can find them useful as well:
+
+* [https://github.com/scrooloose/nerdtree NERDTree]
+* [https://github.com/majutsushi/tagbar Tagbar]
+* [https://github.com/bogado/file-line file-line]
+* [https://github.com/bling/vim-airline vim-airline]
+
+Also these are interesting plugins, but you may need to configure them for kernel:
+
+* [https://github.com/scrooloose/syntastic syntastic]
+* [https://github.com/Valloric/YouCompleteMe YCM]
+
+== Omni completion ==
+
+Vim 7 (and up) already has auto completion support built in it. It calls <code>Omni completion</code>. See [http://vimdoc.sourceforge.net/htmldoc/version7.html#new-omni-completion :help new-omni-completion] for details.
+
+Omni completion works rather slow on such a big project as kernel. If you still want it, you can enable it adding next lines to your <code>~/.vimrc</code>:
+
+<pre>&quot; Enable OmniCompletion
+&quot; http://vim.wikia.com/wiki/Omni_completion
+filetype plugin on
+set omnifunc=syntaxcomplete#Complete
+
+&quot; Configure menu behavior
+&quot; http://vim.wikia.com/wiki/VimTip1386
+set completeopt=longest,menuone
+inoremap &lt;expr&gt; &lt;CR&gt; pumvisible() ? &quot;\&lt;C-y&gt;&quot; : &quot;\&lt;C-g&gt;u\&lt;CR&gt;&quot;
+inoremap &lt;expr&gt; &lt;C-n&gt; pumvisible() ? '&lt;C-n&gt;' :
+  \ '&lt;C-n&gt;&lt;C-r&gt;=pumvisible() ? &quot;\&lt;lt&gt;Down&gt;&quot; : &quot;&quot;&lt;CR&gt;'
+inoremap &lt;expr&gt; &lt;M-,&gt; pumvisible() ? '&lt;C-n&gt;' :
+  \ '&lt;C-x&gt;&lt;C-o&gt;&lt;C-n&gt;&lt;C-p&gt;&lt;C-r&gt;=pumvisible() ? &quot;\&lt;lt&gt;Down&gt;&quot; : &quot;&quot;&lt;CR&gt;'
+
+&quot; Use Ctrl+Space for omni-completion
+&quot; https://stackoverflow.com/questions/510503/ctrlspace-for-omni-and-keyword-completion-in-vim
+inoremap &lt;expr&gt; &lt;C-Space&gt; pumvisible() \|\| &amp;omnifunc == '' ?
+  \ &quot;\&lt;lt&gt;C-n&gt;&quot; :
+  \ &quot;\&lt;lt&gt;C-x&gt;\&lt;lt&gt;C-o&gt;&lt;c-r&gt;=pumvisible() ?&quot; .
+  \ &quot;\&quot;\\&lt;lt&gt;c-n&gt;\\&lt;lt&gt;c-p&gt;\\&lt;lt&gt;c-n&gt;\&quot; :&quot; .
+  \ &quot;\&quot; \\&lt;lt&gt;bs&gt;\\&lt;lt&gt;C-n&gt;\&quot;\&lt;CR&gt;&quot;
+imap &lt;C-@&gt; &lt;C-Space&gt;
+
+&quot; Popup menu hightLight Group
+highlight Pmenu ctermbg=13 guibg=LightGray
+highlight PmenuSel ctermbg=7 guibg=DarkBlue guifg=White
+highlight PmenuSbar ctermbg=7 guibg=DarkGray
+highlight PmenuThumb guibg=Black
+
+&quot; Enable global scope search
+let OmniCpp_GlobalScopeSearch = 1
+&quot; Show function parameters
+let OmniCpp_ShowPrototypeInAbbr = 1
+&quot; Show access information in pop-up menu
+let OmniCpp_ShowAccess = 1
+&quot; Auto complete after '.'
+let OmniCpp_MayCompleteDot = 1
+&quot; Auto complete after '-&gt;'
+let OmniCpp_MayCompleteArrow = 1
+&quot; Auto complete after '::'
+let OmniCpp_MayCompleteScope = 0
+&quot; Don't select first item in pop-up menu
+let OmniCpp_SelectFirstItem = 0</pre>
+And use <kbd>Ctrl</kbd>+<kbd>Space</kbd> for auto completion.
+
+== Eye candy appearance ==
+
+=== 256 colors ===
+
+First of all you want to be sure that your terminal supports 256 colors. For example, it can be achieved using [https://en.wikipedia.org/wiki/Rxvt-unicode urxvt-256] terminal. For <code>gnome-terminal</code> you can just add next line to your <code>~/.bashrc</code>:
+
+<!-- language: sh -->
+<pre>export TERM=&quot;xterm-256color&quot;</pre>
+Once it's done put next line to your <code>~/.vimrc</code>:
+
+<pre>set t_Co=256</pre>
+=== Color scheme ===
+
+Now download schemes you prefer to <code>~/.vim/colors</code> and select them in <code>~/.vimrc</code>:
+
+<pre>set background=dark
+colorscheme hybrid</pre>
+Which color scheme to use is strongly opinion based matter. I may recommend [https://github.com/mrkn/mrkn256.vim mrkn256], [https://github.com/w0ng/vim-hybrid hybrid] and [https://github.com/altercation/vim-colors-solarized solarized] for starters.
+
+=== Font ===
+
+There are a lot of good fonts for programming out there. Many programmers on Linux use [http://terminus-font.sourceforge.net/shots.html Terminus] font, you can try it for starters.
+
+== Known shortcomings ==
+
+Some features are still missing in vim.
+
+# cscope/ctags can't use definitions from <code>include/generated/autoconf.h</code> and ignore code that wasn't built. It is still may be useful to have all code indexed to use it as reference when coding.
+# There is no macro expansion (well, there '''is''' some [http://vim.wikia.com/wiki/Macro_expansion_C/C%2B%2B function] out there (based on <code>gcc -E</code>), but I'm not sure if it's gonna work for kernel).
+
+The only IDE I know to handle those issues is [https://wiki.eclipse.org/HowTo_use_the_CDT_to_navigate_Linux_kernel_source Eclipse with CDT].
+
+== Using kernel man pages with VIM ==
+
+You can create man pages for kernel functions using the script named kernel-doc which can be found under the scripts directory:
+
+<pre>$ ./scripts/kernel-doc -man $(find -name '*.c') | ./scripts/split-man.pl /tmp/man
+
+$ ./scripts/kernel-doc -man $(find -name '*.h') | ./scripts/split-man.pl /tmp/man</pre>
+Add the below line to your <code>~/.vimrc</code> and hover over any word and press Ctrl-m to view the man page:
+
+<pre>map &lt;C-m&gt; :!man /tmp/man/&quot;&lt;cfile&gt;&quot;.9 &lt;CR&gt;</pre>
+The above has been tested on kernel version 4.19
+
+== For older kernel versions ==
+
+You can create man pages for kernel functions using the kernel build system:
+
+<pre>$ make mandocs
+$ sudo make installmandocs</pre>
+The first command builds the kernel man pages, and the second installs them (usually into /usr/local/share/man/man9) As of kernel version 4.4, &quot;make mandocs&quot; will take a long time to complete (about 45 minutes on my machine).
+
+Once the kernel man pages are installed, you can access them from the command line with:
+
+<pre>$ man &lt;symbol&gt;</pre>
+If the symbol is found in other places than the kernel (such as in libc or in some other man pages), you can add the man section number for the kernel, which is '9'.
+
+<pre>$ man 9 &lt;symbol&gt;</pre>
+For example:
+
+<pre>$ man printk
+$ man 9 abs</pre>
+To see the kernel man page for a symbol under the cursor in vim, use '''Shift-K'''
+
+=== References ===
+
+* [https://stackoverflow.com/questions/33676829/vim-configuration-for-linux-kernel-development/33682137#33682137 This] stack overflow answer.
+

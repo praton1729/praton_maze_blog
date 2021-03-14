@@ -1,0 +1,87 @@
+= Flow of the article =
+
+* Setup qemu for different architectures.
+* Setup buildroot to create a root file system.
+* Compile the kernel for arm64(just an example)
+* Use qemu's arm64 virtual machine to load the kernel image.
+
+= Setup tools =
+
+== Setup QEMU virtual machines ==
+
+* Clone the qemu repo and build the executables from the latest stable code.
+* Follow the instructions given [https://www.qemu.org/download/#source here].
+
+== Setup buildroot ==
+
+* Download the buildroot stable source from [https://buildroot.org/download.html here].
+* Run <code>make menuconfig</code> to configure the buildroot build.
+* Follow below steps:-
+** Select target architecture as <code>AARCH64 little endian</code>.
+** Inside toolchain select <code>External Toolchain</code>.
+** I personally use Linaro Toolchain.
+** Inside <code>System Configuration</code> select <code>Enable root login with   password</code> and set any password.
+** Also select <code>Run a getty login prompt after boot</code> option. change the port to &quot;ttyAMA0&quot; inside it.
+** Inside <code>Target Packages</code> select <code>Show packages that are also provided   by busybox</code>
+** Inside <code>Debugging Tools</code> select <code>strace</code> and whatever you need.
+** Inside <code>Text Editors</code> select <code>vim</code> for ease.
+** Inside <code>Filesystem images</code> select <code>cpio root filesystem</code>
+** Exit from the config menu.
+* Run <code>make -j16</code>.
+* This will download toolchain and some files the first time so it might take some time.
+* The consequent builds would be very fast.
+
+= Cross compilation instructions =
+
+== For <code>x86_64</code> ==
+
+=== For a default build ===
+
+* <code>make ARCH=x86_64 x86_64_defconfig</code>
+
+== For <code>arm64</code> ==
+
+=== For a default build ===
+
+* <code>make ARCH=arm64 defconfig</code>
+* <code>ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make all -j16 2&gt;&amp;1 | tee   build.log</code>
+* Tweak the config file as shown below to use the kernel image with qemu.
+
+= Emulation using QEMU =
+
+== For <code>arm64</code> ==
+
+=== Kernel building tips ===
+
+* Before building the kernel you would need to tweak a few options in the generated config in order to boot it with qemu.
+* Set <code>CONFIG_CMDLINE=&quot;console=ttyAMA0&quot;</code>.
+* Set <code>CONFIG_INITRAMFS_SOURCE=&lt;path to rootfs&gt;</code>.
+* For example for me it was <code>CONFIG_INITRAMFS_SOURCE=/home/prathubaronia/Downloads/Tools/Buildroot/buildroot-2020.02.6/output/images/rootfs.cpio</code>.
+
+=== Emualting with qemu ===
+
+* Provide the executable that we built in the first section of the article.
+* Use the below bash script for booting the VM.
+
+<pre>#!/bin/bash
+qemu-system-aarch64 \
+    -machine virt \
+    -cpu cortex-a57 \
+    -machine type=virt \
+    -nographic \
+    -smp 1 -m 2048 \
+    -kernel ./arch/arm64/boot/Image \
+    --append &quot;console=ttyAMA0&quot; \
+    $1 $2</pre>
+'''Yay!!!'''
+
+= Debugging with gdb =
+
+* Ref : https://www.youtube.com/watch?v=swniLhXg-3U&amp;list=PLbv5B7I2l-j4Gj21_h_oh7sSFCYEvPU_m&amp;index=2
+* Ref : http://nickdesaulniers.github.io/blog/2018/10/24/booting-a-custom-linux-kernel-in-qemu-and-debugging-it-with-gdb/
+
+= Create Custom initramfs =
+
+* Ref : https://balau82.wordpress.com/2012/03/31/compile-linux-kernel-3-2-for-arm-and-emulate-with-qemu/
+* Ref : https://gist.github.com/chrisdone/02e165a0004be33734ac2334f215380e
+
