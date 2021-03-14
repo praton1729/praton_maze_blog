@@ -2,8 +2,8 @@
 
 echo "Building website...."
 
-jekyll build
+bundle exec jekyll build
 
 echo "Publishing website"
 
-jekyll serve
+bundle exec jekyll serve
