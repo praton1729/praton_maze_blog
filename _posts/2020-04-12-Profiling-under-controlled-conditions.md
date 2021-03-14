@@ -1,0 +1,68 @@
+---
+layout: post
+title: "Profiling with ftrace under controlled conditions"
+---
+
+# arm64
+
+## Controlling CPUs
+
+### Switching off lower grade cores
+
+```bash
+#! /system/bin/sh
+
+# Aim: Switch_off core 1,2,3,4,5,7, and set other cores i.e. 0 and 6 to max frequency
+
+# Switch off gold core except cpu-6
+echo 0 > /sys/devices/system/cpu/cpu4/online
+echo 0 > /sys/devices/system/cpu/cpu5/online
+echo 0 > /sys/devices/system/cpu/cpu7/online
+
+# Switch off silver core except cpu-0
+echo 0 > /sys/devices/system/cpu/cpu1/online
+echo 0 > /sys/devices/system/cpu/cpu2/online
+echo 0 > /sys/devices/system/cpu/cpu3/online
+
+# Set on cores to max frequency by scaling the min and max frequency
+
+# CPU0
+echo 1785600 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+echo 1785600 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+
+# CPU6
+echo 2419200 > /sys/devices/system/cpu/cpu6/cpufreq/scaling_min_freq
+echo 2419200 > /sys/devices/system/cpu/cpu6/cpufreq/scaling_max_freq
+```
+
+## Controlling DDR
+
+```bash
+#! /system/bin/sh
+
+## Enable performance mode for possible sys nodes under devfreq
+
+for i in /sys/class/devfreq/*;
+do
+	echo performance > $i/governor;
+done
+
+```
+
+## Setup function tracing
+
+```bash
+#! /system/bin/sh -x
+
+# Set the tracer type
+
+echo function_graph > /sys/kernel/debug/tracing/current_tracer
+
+# Set the tracer function filter
+
+echo clear_huge_page > /sys/kernel/debug/tracing/set_ftrace_filter
+
+# Switch on the tracer
+
+echo 1 > /sys/kernel/debug/tracing/tracing_on
+```

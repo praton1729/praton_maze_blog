@@ -1,0 +1,12 @@
+---
+layout: post
+title:  "ELF format TLDR;"
+---
+
+## Key differences
+
+## References
+
+- [http://people.redhat.com/mpolacek/src/devconf2012.pdf]
+- [https://www.conradk.com/codebase/2017/05/28/elf-from-scratch/] 
+
