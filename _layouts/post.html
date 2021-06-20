@@ -5,3 +5,12 @@ layout: default
 <p>{{ page.date | date_to_string }} - {{ page.author }}</p>
 
 {{ content }}
+
+{% if page.previous %}
+	<a rel="prev" href="{{ page.previous.url }}">&larr; {{ page.previous.title }}</a>
+{% endif %}
+<br>
+{% if page.next %}
+	<a rel="next" href="{{ page.next.url }}">{{ page.next.title }} &rarr;</a>
+{% endif %}
+

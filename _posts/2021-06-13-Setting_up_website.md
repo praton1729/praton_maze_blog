@@ -22,6 +22,7 @@ multiple subdomains within a single domain name and host it on a single server.
 - Copy `/etc/nginx/sites-available/default` to
   `/etc/nginx/sites-available/<your-website>`
 - Alter the file `/etc/nginx/sites-available/<your-website>` to look like below.
+
 ```bash
 server {
         listen 80;
