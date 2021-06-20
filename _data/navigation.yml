@@ -1,0 +1,6 @@
+- name: Home
+  link: /
+- name: About
+  link: /about/index.html
+- name: Donate
+  link: /donate/index.html

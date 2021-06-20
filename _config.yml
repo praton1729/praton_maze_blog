@@ -1,20 +1,18 @@
 title: Praton maze
+
 email: prathubaronia@oneplus.com
+
 description: >- # this means to ignore newlines until "baseurl:"
         I blog about what I learn everyday in my Linux kernel experiments
         in short readable articles.
+
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
+
 github_username: praton1729
 
-gems:
-   - jekyll-paginate
-
-# Build settings
-theme: minima
 plugins:
   - jekyll-feed
-  - jekyll-paginate
 
 markdown: kramdown
 highlighter: rouge
@@ -22,8 +20,3 @@ highlighter: rouge
 kramdown:
         input: GFM
         syntax_highlighter: rouge
-
-show_excerpts: enabled
-
-#paginate: 5
-#paginate_path: "/:num/"
