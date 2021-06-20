@@ -1,21 +1,11 @@
+{% highlight c %}
+
 /*
  * =====================================================================================
- *
- *       Filename:  mmap_anonymous_allocation.c
- *
  *    Description:  Allocating anonymous memory through malloc and mmap
  *                  Since mmap allocates the zeroed out memory and for malloc
  *		    we need to explicitly zero it out.
  *                  So basically comparing the timings of both.
- *
- *        Version:  1.0
- *        Created:  Tuesday 10 November 2020 07:04:42  IST
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  PRATHU BARONIA (praton), prathu.baronia@oneplus.com
- *   Organization:  OnePlus RnD
- *
  * =====================================================================================
  */
 
@@ -86,3 +76,4 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
+{% endhighlight %}

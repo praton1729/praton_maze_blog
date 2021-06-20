@@ -8,7 +8,7 @@ finds this useful.
 
 # My tmux config
 
-{% include tmux.conf %}
+{% include tmux/tmux.conf %}
 
 # Resizing panes
 
