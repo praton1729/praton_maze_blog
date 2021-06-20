@@ -24,8 +24,9 @@ Main differences between Linux kernel and regular C project (from developer's po
 ## Installing indexing tools ##
 
 To navigate kernel code I would advise `cscope` and `ctags` tools. To install them run next command:
-
-    $ sudo aptitude install cscope exuberant-ctags
+{% highlight bash %}
+$ sudo aptitude install cscope exuberant-ctags
+{% endhighlight %}
 
 A little explanation:
 

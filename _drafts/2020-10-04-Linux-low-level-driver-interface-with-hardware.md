@@ -1,9 +1,13 @@
+---
+layout: post
+title:  "Linux low-level driver interface with hardware"
+---
 
+## Problem statement
 
-Problem statement: To explain how linux drivers write to and read from hardware
+- To explain how linux drivers write to and read from hardware
 
-
-References
+## References
 
 - https://tldp.org/LDP/tlk/dd/drivers.html
 - https://stackoverflow.com/questions/10003117/how-are-low-level-device-drivers-written-for-linux
