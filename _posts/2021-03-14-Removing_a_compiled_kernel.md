@@ -3,6 +3,8 @@ layout: post
 title: "Removing a compiled kernel from the system"
 ---
 
+Necessary while testing kernels on x86_64 Ubuntu systems.
+
 # Delete all the relevant files from `/boot`
 
 - **Currently only applicable to Ubuntu. Will update it as I work on other

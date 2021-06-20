@@ -3,8 +3,8 @@ layout: post
 title: "Breaking down arm64 assmebly"
 ---
 
-# Disassembling a simple program
-
+Here we discuss arm64 specific things like calling convention, assembly sections
+and other arm64 assembly special instructions like memory barriers.
 
 ## Calling convention
 

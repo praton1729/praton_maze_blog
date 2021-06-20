@@ -3,6 +3,10 @@ layout: post
 title : "ION Memory Allocator part-1"
 ---
 
+A history of the Ion memory allocator in Android. We discuss its need and its
+evolution over time and finally its dropping from the mainline linux kernel
+because of introduction of dmabuf-heaps.
+
 # What is ion memory allocator?
 
 ION is a generalized memory manager that Google introduced in the Android 4.0

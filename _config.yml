@@ -23,5 +23,7 @@ kramdown:
         input: GFM
         syntax_highlighter: rouge
 
+show_excerpts: enabled
+
 #paginate: 5
 #paginate_path: "/:num/"

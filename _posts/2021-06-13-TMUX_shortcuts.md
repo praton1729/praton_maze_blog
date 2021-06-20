@@ -3,6 +3,9 @@ layout: post
 title: "tmux shortcuts"
 ---
 
+Just a simple cheatsheet of tmux shortcuts for me to refer or for anyone who
+finds this useful.
+
 # Resizing panes
 
 - `Ctrl-B` followed by `Alt-Up` will adjust the size upwards.

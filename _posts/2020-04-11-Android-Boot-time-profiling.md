@@ -3,6 +3,10 @@ layout: post
 title: "Boot time profiling for Android"
 ---
 
+In this post we will cover an overview of Android Boot flow and a simple method
+of breaking it down into different milestones and some typical timings from
+Android devices for each milestone.
+
 # Android Boot Flow
 
 ## Bootloader

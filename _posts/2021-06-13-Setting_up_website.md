@@ -3,6 +3,11 @@ layout: post
 title: "Setting up personal website with nginx"
 ---
 
+Here in this post we will setup an nginx server on a Ubuntu/Debian machine and add a
+simple page to it to see it in action. Next we will cover how to setup https for
+your personally hosted webpages for free. Then at last we will cover setting up
+multiple subdomains within a single domain name and host it on a single server.
+
 *P.S: The instructions are specific to Debian/Ubuntu*
 
 ## Setting up webserver

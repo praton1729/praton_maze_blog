@@ -3,6 +3,9 @@ layout: post
 title:  "Android App launch time profiling"
 ---
 
+In this post we will discuss some basic and advanced ways of measuring
+application launch times in Android. Plots to be added soon.
+
 ### Application creation
 
 When your application launches, the blank starting window remains on the screen until the system finishes drawing the app for the first

@@ -3,9 +3,8 @@ layout: post
 title: "Optimized hugepage zeroing in 64-bit"
 ---
 
-# Problem Statement
-
-- Zeroing of THP happens in 4K chunks. We need to explore the possibility of doing that as huge page mapping itself. 
+Zeroing of THP happens in 4K chunks. We need to explore the possibility of doing
+that as huge page mapping itself. 
 
 ### Questions to answer:
 

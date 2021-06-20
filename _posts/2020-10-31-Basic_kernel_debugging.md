@@ -3,6 +3,10 @@ layout: post
 title: Basic Kernel Debugging Techniques
 ---
 
+Gist of an introductory session that I took on how to analyze different kinds of
+kernel issues. I have tried to keep it generic buyt somethings are none the less
+Qualcomm chipset specific.
+
 # Scope of talk
 - dmesg analysis, dump analysis, tools
 - General kernel debugging

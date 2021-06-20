@@ -3,6 +3,9 @@ layout: post
 title: "Profiling with ftrace under controlled conditions"
 ---
 
+A simple example on how to reduce the variation in the ftrace data while
+profiling kernel timings.
+
 # arm64
 
 ## Controlling CPUs

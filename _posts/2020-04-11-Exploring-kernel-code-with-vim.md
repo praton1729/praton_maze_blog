@@ -3,13 +3,13 @@ layout: post
 title: "Exploring Kernel code with vim"
 ---
 
-## Problem statement
-
-Since the Linux kernel has a huge code database we need an efficient way to browse the source code in vim.
-For example we want to jump to function definitions, function calls, macro definitions etc. inside the code used for cross compiling for a
-particular architecture.
-Here I have taken the example of arm64 since that is the architecture I deal with everyday.
-This finer details in this article would make sense after significant exploration of kernel code.
+Here the problem statement is since the Linux kernel has a huge code database we
+need an efficient way to browse the source code in vim.  For example we want to
+jump to function definitions, function calls, macro definitions etc. inside the
+code used for cross compiling for a particular architecture.
+Here I have taken the example of arm64 since that is the architecture I deal
+with everyday. This finer details in this article would make sense after
+significant exploration of kernel code.
 
 Main differences between Linux kernel and regular C project (from developer's point of view) are next:
 

@@ -3,6 +3,8 @@ layout: post
 title: "Emulation and cross compiling arm64 kernel"
 ---
 
+A simple qemu setup to quickly test kernel patches.
+
 # Flow of the article
 
 - Setup qemu for different architectures.
