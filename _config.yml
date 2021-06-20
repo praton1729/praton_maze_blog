@@ -16,7 +16,6 @@ plugins:
   - jekyll-paginate
 
 markdown: kramdown
-highlighter: rouge
 
 kramdown:
         input: GFM
