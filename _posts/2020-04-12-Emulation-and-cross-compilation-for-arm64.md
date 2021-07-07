@@ -92,10 +92,10 @@ qemu-system-aarch64 \
 
 # Debugging with gdb
 
-- Ref : https://www.youtube.com/watch?v=swniLhXg-3U&list=PLbv5B7I2l-j4Gj21_h_oh7sSFCYEvPU_m&index=2
-- Ref : http://nickdesaulniers.github.io/blog/2018/10/24/booting-a-custom-linux-kernel-in-qemu-and-debugging-it-with-gdb/
+- [Ref-1](https://www.youtube.com/watch?v=swniLhXg-3U&list=PLbv5B7I2l-j4Gj21_h_oh7sSFCYEvPU_m&index=2)
+- [Ref-2](http://nickdesaulniers.github.io/blog/2018/10/24/booting-a-custom-linux-kernel-in-qemu-and-debugging-it-with-gdb/)
 
 # Create Custom initramfs
 
-- Ref : https://balau82.wordpress.com/2012/03/31/compile-linux-kernel-3-2-for-arm-and-emulate-with-qemu/
-- Ref : https://gist.github.com/chrisdone/02e165a0004be33734ac2334f215380e
+- [Ref-1](https://balau82.wordpress.com/2012/03/31/compile-linux-kernel-3-2-for-arm-and-emulate-with-qemu/)
+- [Ref-2](https://gist.github.com/chrisdone/02e165a0004be33734ac2334f215380e)

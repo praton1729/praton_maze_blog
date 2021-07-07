@@ -103,8 +103,7 @@ listed below:
 ```C
    ION_HEAP_TYPE_SYSTEM:        memory allocated via vmalloc_user().
    ION_HEAP_TYPE_SYSTEM_CONTIG: memory allocated via kzalloc.
-   ION_HEAP_TYPE_CARVEOUT:	carveout memory is physically contiguous and set
-aside at boot.
+   ION_HEAP_TYPE_CARVEOUT:	carveout memory is physically contiguous and set aside at boot.
 ```
 Developers may choose to add more ION heaps. For example, this NVIDIA patch was
 submitted to add ION_HEAP_TYPE_IOMMU for hardware blocks equipped with an IOMMU.
@@ -132,8 +131,7 @@ the buffer.
 User-space clients interact with ION using the ioctl() system call interface. To
 allocate a buffer, the client makes this call:
 ```C
-   int ioctl(int client_fd, ION_IOC_ALLOC, struct ion_allocation_data
-*allocation_data)
+   int ioctl(int client_fd, ION_IOC_ALLOC, struct ion_allocation_data *allocation_data)
 ```
 For smart phone use cases involving multimedia middleware, the user process
 typically allocates the buffer from ION, obtains a file descriptor using
@@ -141,8 +139,7 @@ the ION_IOC_SHARE command, then passes the file desciptor to a kernel driver.
 The kernel driver calls ion_import_fd() which converts the file descriptor to
 an ion_handle object, as shown below:
 ```C
-    struct ion_handle *ion_import_fd(struct ion_client *client, int
-fd_from_user);
+    struct ion_handle *ion_import_fd(struct ion_client *client, int fd_from_user);
 ```
 # More roles of ION
 

@@ -50,9 +50,9 @@ Kernel has quite good script (`scripts/tags.sh`) for creating kernel index datab
 create index, instead of running that script directly.
 
 Example:
-
-    $ make O=. ARCH=arm SUBARCH=omap2 COMPILED_SOURCE=1 cscope tags
-
+```bash
+$ make O=. ARCH=arm SUBARCH=omap2 COMPILED_SOURCE=1 cscope tags
+```
 where
 
  - `O=.` - use absolute paths (useful if you want to load created cscope/ctags index files outside of kernel directory, e.g. for development
@@ -77,58 +77,56 @@ Insights on manual indexing were taken from [here][2].
 First you need to create `cscope.files` file which would list all files you want to index. For example, I'm using next commands to list
 files for ARM architecture (`arch/arm`), and particularly for OMAP platform (excluding rest of platforms to keep navigation easy):
 
-<!-- language: sh -->
-
-    find    $dir                                          \
-            -path "$dir/arch*"               -prune -o    \
-            -path "$dir/tmp*"                -prune -o    \
-            -path "$dir/Documentation*"      -prune -o    \
-            -path "$dir/scripts*"            -prune -o    \
-            -path "$dir/tools*"              -prune -o    \
-            -path "$dir/include/config*"     -prune -o    \
-            -path "$dir/usr/include*"        -prune -o    \
-            -type f                                       \
-            -not -name '*.mod.c'                          \
-            -name "*.[chsS]" -print > cscope.files
-    find    $dir/arch/arm                                 \
-            -path "$dir/arch/arm/mach-*"     -prune -o    \
-            -path "$dir/arch/arm/plat-*"     -prune -o    \
-            -path "$dir/arch/arm/configs"    -prune -o    \
-            -path "$dir/arch/arm/kvm"        -prune -o    \
-            -path "$dir/arch/arm/xen"        -prune -o    \
-            -type f                                       \
-            -not -name '*.mod.c'                          \
-            -name "*.[chsS]" -print >> cscope.files
-    find    $dir/arch/arm/mach-omap2/                     \
-            $dir/arch/arm/plat-omap/                      \
-            -type f                                       \
-            -not -name '*.mod.c'                          \
-            -name "*.[chsS]" -print >> cscope.files
-
+```bash
+find    $dir                                          \
+        -path "$dir/arch*"               -prune -o    \
+        -path "$dir/tmp*"                -prune -o    \
+        -path "$dir/Documentation*"      -prune -o    \
+        -path "$dir/scripts*"            -prune -o    \
+        -path "$dir/tools*"              -prune -o    \
+        -path "$dir/include/config*"     -prune -o    \
+        -path "$dir/usr/include*"        -prune -o    \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name "*.[chsS]" -print > cscope.files
+find    $dir/arch/arm                                 \
+        -path "$dir/arch/arm/mach-*"     -prune -o    \
+        -path "$dir/arch/arm/plat-*"     -prune -o    \
+        -path "$dir/arch/arm/configs"    -prune -o    \
+        -path "$dir/arch/arm/kvm"        -prune -o    \
+        -path "$dir/arch/arm/xen"        -prune -o    \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name "*.[chsS]" -print >> cscope.files
+find    $dir/arch/arm/mach-omap2/                     \
+        $dir/arch/arm/plat-omap/                      \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name "*.[chsS]" -print >> cscope.files
+```
 For x86 architecture (`arch/x86`) you can use something like this:
 
-<!-- language: sh -->
-
-    find    $dir                                          \
-            -path "$dir/arch*"               -prune -o    \
-            -path "$dir/tmp*"                -prune -o    \
-            -path "$dir/Documentation*"      -prune -o    \
-            -path "$dir/scripts*"            -prune -o    \
-            -path "$dir/tools*"              -prune -o    \
-            -path "$dir/include/config*"     -prune -o    \
-            -path "$dir/usr/include*"        -prune -o    \
-            -type f                                       \
-            -not -name '*.mod.c'                          \
-            -name "*.[chsS]" -print > cscope.files
-    find    $dir/arch/x86                                 \
-            -path "$dir/arch/x86/configs"    -prune -o    \
-            -path "$dir/arch/x86/kvm"        -prune -o    \
-            -path "$dir/arch/x86/lguest"     -prune -o    \
-            -path "$dir/arch/x86/xen"        -prune -o    \
-            -type f                                       \
-            -not -name '*.mod.c'                          \
-            -name "*.[chsS]" -print >> cscope.files
-
+```bash
+find    $dir                                          \
+        -path "$dir/arch*"               -prune -o    \
+        -path "$dir/tmp*"                -prune -o    \
+        -path "$dir/Documentation*"      -prune -o    \
+        -path "$dir/scripts*"            -prune -o    \
+        -path "$dir/tools*"              -prune -o    \
+        -path "$dir/include/config*"     -prune -o    \
+        -path "$dir/usr/include*"        -prune -o    \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name "*.[chsS]" -print > cscope.files
+find    $dir/arch/x86                                 \
+        -path "$dir/arch/x86/configs"    -prune -o    \
+        -path "$dir/arch/x86/kvm"        -prune -o    \
+        -path "$dir/arch/x86/lguest"     -prune -o    \
+        -path "$dir/arch/x86/xen"        -prune -o    \
+        -type f                                       \
+        -not -name '*.mod.c'                          \
+        -name "*.[chsS]" -print >> cscope.files
+```
 Where `dir` variable can have one of next values:
 
  - `.`: if you are gonna work only in kernel source code directory; in this case those commands should be run from root directory of kernel
@@ -139,26 +137,26 @@ Where `dir` variable can have one of next values:
 I'm using first option (`dir=.`), because I'm not developing any out-of-tree modules.
 
 Now when `cscope.files` file is ready, we need to run actual indexing:
-
-    $ cscope -b -q -k
-
+```bash
+$ cscope -b -q -k
+```
 Where `-k` parameter tells `cscope` to not index C standard library (as kernel doesn't use it).
 
 Now it's time to create `ctags` index database. To accelerate this stage, we're gonna reuse already created `cscope.files`:
-
-    $ ctags -L cscope.files
-
+```bash
+$ ctags -L cscope.files
+```
 Ok, `cscope` and `ctags` index databases are built, and you can remove `cscope.files` file, as we don't need it anymore:
-
-    $ rm -f cscope.files
-
+```bash
+$ rm -f cscope.files
+```
 Next files contain index databases (for `cscope` and `ctags`):
-
-    - cscope.in.out
-    - cscope.out
-    - cscope.po.out
-    - tags
-
+```bash
+- cscope.in.out
+- cscope.out
+- cscope.po.out
+- tags
+```
 Keep them in root of kernel sources directory.
 
 ## vim plugins ##
@@ -174,16 +172,16 @@ Install **pathogen** like it's described [here][5].
 
 Don't forget to do next stuff (as it's described at the same link):
 
->Add this to your `vimrc`:
-
->     execute pathogen#infect()
-
-> If you're brand new to Vim and lacking a `vimrc`, `vim ~/.vimrc` and paste in the following super-minimal example:
-
->     execute pathogen#infect()
->     syntax on
->     filetype plugin indent on
-
+Add this to your `vimrc`:
+```bash
+execute pathogen#infect()
+```
+If you're brand new to Vim and lacking a `vimrc`, `vim ~/.vimrc` and paste in the following super-minimal example:
+```bash
+execute pathogen#infect()
+syntax on
+filetype plugin indent on
+```
 
 ## Installing cscope maps for vim ##
 
@@ -192,19 +190,21 @@ convenient though. To accelerate things you can use shortcuts instead (so you ca
 combination and jump to function). In order to add shortcuts for cscope you need to obtain `cscope_maps.vim` file.
 
 To install it using **pathogen** you can just clone [this][6] repo to your `~/.vim/bundle`:
-
-    $ git clone https://github.com/joe-skb7/cscope-maps.git ~/.vim/bundle/cscope-maps
-
+```bash
+$ git clone https://github.com/joe-skb7/cscope-maps.git ~/.vim/bundle/cscope-maps
+```
 Now you should be able to navigate between functions and files in vim using shortcuts. Open some kernel source file, put your keyboard
 cursor on some function call, and press <kbd>Ctrl</kbd>+<kbd>\</kbd> followed by <kbd>g</kbd>. It should bring you to the function
-implementation. Or it can show you all available function implementations, then you can choose which one to use: [![cscope-struct][7]][7].
+implementation. Or it can show you all available function implementations, then you can choose which one to use: 
+
+[![cscope-struct][7]][7].
 
 For the rest of key mappings see [cscope_maps.vim][8] file.
 
 You can also use commands in vim like:
-
-    :cs f g kmalloc
-
+```bash
+:cs f g kmalloc
+```
 See `:help cscope` for details.
 
 ## ctags note ##
@@ -215,8 +215,9 @@ and press <kbd>g</kbd> followed by <kbd>Ctrl</kbd>+<kbd>]</kbd>. See [this answe
 ## cscope note ##
 
 Next trick can be used to find structure **declaration** in kernel:
-
-    :cs f t struct device {
+```bash
+:cs f t struct device {
+```
 
 Note that above command relies on specific struct declaration style (used in kernel), so we know that struct declaration is always has this
 form: `struct some_stuct {`. This trick might not work in projects with another coding style.
@@ -227,12 +228,14 @@ If you are developing out-of-tree module, you will probably need to load `cscope
 be done by next commands in vim (in command mode).
 
 Load external cscope database:
-
-    :cs add /path/to/your/kernel/cscope.out
+```bash
+:cs add /path/to/your/kernel/cscope.out
+```
 
 Load external ctags database:
-
-    :set tags=/path/to/your/kernel/tags
+```bash
+:set tags=/path/to/your/kernel/tags
+```
 
 # vimrc #
 
@@ -240,25 +243,25 @@ Some modifications need to be done to your `~/.vimrc` as well, in order to bette
 
 First of all, let's highlight 81th column with vertical line (as kernel coding requires that you should keep your lines length at 80
 characters max):
-
-    " 80 characters line
-    set colorcolumn=81
-    "execute "set colorcolumn=" . join(range(81,335), ',')
-    highlight ColorColumn ctermbg=Black ctermfg=DarkRed
-
+```bash
+" 80 characters line
+set colorcolumn=81
+"execute "set colorcolumn=" . join(range(81,335), ',')
+highlight ColorColumn ctermbg=Black ctermfg=DarkRed
+```
 Uncomment second line if you want to make 80+ columns highlighted as well.
 
 Trailing spaces are prohibited by kernel coding style, so you may want to highlight them:
-
-    " Highlight trailing spaces
-    " http://vim.wikia.com/wiki/Highlight_unwanted_spaces
-    highlight ExtraWhitespace ctermbg=red guibg=red
-    match ExtraWhitespace /\s\+$/
-    autocmd BufWinEnter * match ExtraWhitespace /\s\+$/
-    autocmd InsertEnter * match ExtraWhitespace /\s\+\%#\@<!$/
-    autocmd InsertLeave * match ExtraWhitespace /\s\+$/
-    autocmd BufWinLeave * call clearmatches()
-
+```bash
+" Highlight trailing spaces
+" http://vim.wikia.com/wiki/Highlight_unwanted_spaces
+highlight ExtraWhitespace ctermbg=red guibg=red
+match ExtraWhitespace /\s\+$/
+autocmd BufWinEnter * match ExtraWhitespace /\s\+$/
+autocmd InsertEnter * match ExtraWhitespace /\s\+\%#\@<!$/
+autocmd InsertLeave * match ExtraWhitespace /\s\+$/
+autocmd BufWinLeave * call clearmatches()
+```
 
 ## Kernel coding style ##
 
@@ -284,51 +287,51 @@ Vim 7 (and up) already has auto completion support built in it. It calls `Omni c
 
 Omni completion works rather slow on such a big project as kernel. If you still want it, you can enable it adding next lines to your
 `~/.vimrc`:
+```bash
+" Enable OmniCompletion
+" http://vim.wikia.com/wiki/Omni_completion
+filetype plugin on
+set omnifunc=syntaxcomplete#Complete
 
-    " Enable OmniCompletion
-    " http://vim.wikia.com/wiki/Omni_completion
-    filetype plugin on
-    set omnifunc=syntaxcomplete#Complete
-    
-    " Configure menu behavior
-    " http://vim.wikia.com/wiki/VimTip1386
-    set completeopt=longest,menuone
-    inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
-    inoremap <expr> <C-n> pumvisible() ? '<C-n>' :
-      \ '<C-n><C-r>=pumvisible() ? "\<lt>Down>" : ""<CR>'
-    inoremap <expr> <M-,> pumvisible() ? '<C-n>' :
-      \ '<C-x><C-o><C-n><C-p><C-r>=pumvisible() ? "\<lt>Down>" : ""<CR>'
-    
-    " Use Ctrl+Space for omni-completion
-    " https://stackoverflow.com/questions/510503/ctrlspace-for-omni-and-keyword-completion-in-vim
-    inoremap <expr> <C-Space> pumvisible() \|\| &omnifunc == '' ?
-      \ "\<lt>C-n>" :
-      \ "\<lt>C-x>\<lt>C-o><c-r>=pumvisible() ?" .
-      \ "\"\\<lt>c-n>\\<lt>c-p>\\<lt>c-n>\" :" .
-      \ "\" \\<lt>bs>\\<lt>C-n>\"\<CR>"
-    imap <C-@> <C-Space>
-    
-    " Popup menu hightLight Group
-    highlight Pmenu ctermbg=13 guibg=LightGray
-    highlight PmenuSel ctermbg=7 guibg=DarkBlue guifg=White
-    highlight PmenuSbar ctermbg=7 guibg=DarkGray
-    highlight PmenuThumb guibg=Black
-    
-    " Enable global scope search
-    let OmniCpp_GlobalScopeSearch = 1
-    " Show function parameters
-    let OmniCpp_ShowPrototypeInAbbr = 1
-    " Show access information in pop-up menu
-    let OmniCpp_ShowAccess = 1
-    " Auto complete after '.'
-    let OmniCpp_MayCompleteDot = 1
-    " Auto complete after '->'
-    let OmniCpp_MayCompleteArrow = 1
-    " Auto complete after '::'
-    let OmniCpp_MayCompleteScope = 0
-    " Don't select first item in pop-up menu
-    let OmniCpp_SelectFirstItem = 0
+" Configure menu behavior
+" http://vim.wikia.com/wiki/VimTip1386
+set completeopt=longest,menuone
+inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
+inoremap <expr> <C-n> pumvisible() ? '<C-n>' :
+  \ '<C-n><C-r>=pumvisible() ? "\<lt>Down>" : ""<CR>'
+inoremap <expr> <M-,> pumvisible() ? '<C-n>' :
+  \ '<C-x><C-o><C-n><C-p><C-r>=pumvisible() ? "\<lt>Down>" : ""<CR>'
 
+" Use Ctrl+Space for omni-completion
+" https://stackoverflow.com/questions/510503/ctrlspace-for-omni-and-keyword-completion-in-vim
+inoremap <expr> <C-Space> pumvisible() \|\| &omnifunc == '' ?
+  \ "\<lt>C-n>" :
+  \ "\<lt>C-x>\<lt>C-o><c-r>=pumvisible() ?" .
+  \ "\"\\<lt>c-n>\\<lt>c-p>\\<lt>c-n>\" :" .
+  \ "\" \\<lt>bs>\\<lt>C-n>\"\<CR>"
+imap <C-@> <C-Space>
+
+" Popup menu hightLight Group
+highlight Pmenu ctermbg=13 guibg=LightGray
+highlight PmenuSel ctermbg=7 guibg=DarkBlue guifg=White
+highlight PmenuSbar ctermbg=7 guibg=DarkGray
+highlight PmenuThumb guibg=Black
+
+" Enable global scope search
+let OmniCpp_GlobalScopeSearch = 1
+" Show function parameters
+let OmniCpp_ShowPrototypeInAbbr = 1
+" Show access information in pop-up menu
+let OmniCpp_ShowAccess = 1
+" Auto complete after '.'
+let OmniCpp_MayCompleteDot = 1
+" Auto complete after '->'
+let OmniCpp_MayCompleteArrow = 1
+" Auto complete after '::'
+let OmniCpp_MayCompleteScope = 0
+" Don't select first item in pop-up menu
+let OmniCpp_SelectFirstItem = 0
+```
 And use <kbd>Ctrl</kbd>+<kbd>Space</kbd> for auto completion.
 
 ## Eye candy appearance ##
@@ -337,22 +340,20 @@ And use <kbd>Ctrl</kbd>+<kbd>Space</kbd> for auto completion.
 
 First of all you want to be sure that your terminal supports 256 colors. For example, it can be achieved using [urxvt-256][18] terminal. For
 `gnome-terminal` you can just add next line to your `~/.bashrc`:
-
-<!-- language: sh -->
-
-    export TERM="xterm-256color"
-
+```bash
+export TERM="xterm-256color"
+```
 Once it's done put next line to your `~/.vimrc`:
-
-    set t_Co=256
-
+```bash
+set t_Co=256
+```
 ### Color scheme ###
 
 Now download schemes you prefer to `~/.vim/colors` and select them in `~/.vimrc`:
-
-    set background=dark
-    colorscheme hybrid
-
+```bash
+set background=dark
+colorscheme hybrid
+```
 Which color scheme to use is strongly opinion based matter. I may recommend [mrkn256][19], [hybrid][20] and [solarized][21] for starters.
 
 ### Font ###
@@ -374,42 +375,41 @@ The only IDE I know to handle those issues is [Eclipse with CDT][24].
 
 You can create man pages for kernel functions using the script named kernel-doc which can be found under the scripts directory:
 
-```
+```bash
 $ ./scripts/kernel-doc -man $(find -name '*.c') | ./scripts/split-man.pl /tmp/man
-
 $ ./scripts/kernel-doc -man $(find -name '*.h') | ./scripts/split-man.pl /tmp/man
 ```
 
 Add the below line to your `~/.vimrc` and hover over any word and press Ctrl-m to view the man page:
-
-    map <C-m> :!man /tmp/man/"<cfile>".9 <CR>
-
+```bash
+map <C-m> :!man /tmp/man/"<cfile>".9 <CR>
+```
 The above has been tested on kernel version 4.19
 
 ## For older kernel versions ##
 
 You can create man pages for kernel functions using the kernel build system:
-
-    $ make mandocs
-    $ sudo make installmandocs
-
+```bash
+$ make mandocs
+$ sudo make installmandocs
+```
 The first command builds the kernel man pages, and the second installs them (usually into /usr/local/share/man/man9)
 As of kernel version 4.4, "make mandocs" will take a long time to complete (about 45 minutes on my machine).
 
 Once the kernel man pages are installed, you can access them from the command line with:
-
-    $ man <symbol>
-
+```bash
+$ man <symbol>
+```
 If the symbol is found in other places than the kernel (such as in libc or in some other man pages), you can add
 the man section number for the kernel, which is '9'.
-
-    $ man 9 <symbol>
-
+```bash
+$ man 9 <symbol>
+```
 For example:
-
-    $ man printk
-    $ man 9 abs
-
+```bash
+$ man printk
+$ man 9 abs
+```
 To see the kernel man page for a symbol under the cursor in vim, use '''Shift-K'''
 
 ### References ###

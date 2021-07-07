@@ -4,8 +4,8 @@ title: Basic Kernel Debugging Techniques
 ---
 
 Gist of an introductory session that I took on how to analyze different kinds of
-kernel issues. I have tried to keep it generic buyt somethings are none the less
-Qualcomm chipset specific.
+kernel issues. I have tried to keep it generic but somethings might be none the
+less arch specific.
 
 # Scope of talk
 - dmesg analysis, dump analysis, tools
@@ -43,21 +43,8 @@ regardless of whatever else it is doing, unless it is completely locked up.
 - Dumps parsers
 
 ### Dumps:
-- Minidump
-- Full dump
-
-### Parsing flows
-
-#### Minidump
-
-Mini Dump.gz --> Extract Minidump --> Split Minidump --> Decrypt Minidump -->
-Generate ap_minidump.elf file --> parse decrypted dump through LRDPv2 --> launch
-T32 with the generated script or launch crash
-
-#### Full dump
-
-Full Dump --> parse through LRDPv2 --> launch T32 with the generated script or
-launch crash
+- Minidump - for dump collection in production devices.
+- Full dump - for internal debugging.
 
 ## Pulling config:
 - `adb pull /proc/config.gz`
@@ -95,4 +82,4 @@ launch crash
 - Interactive debugging 
 
 ## References
-- https://elinux.org/images/1/14/Linuxkerneldebugging.pdf
+- [ELinux Kernel Debugging](https://elinux.org/images/1/14/Linuxkerneldebugging.pdf)
