@@ -7,10 +7,9 @@ layout: default
 {{ content }}
 
 {% if page.previous %}
-	<a rel="prev" href="{{ page.previous.url }}">&larr; {{ page.previous.title }}</a>
+	<a rel="prev" href="{{ page.previous.url }}" style="float: left">&larr; {{ page.previous.title }}</a>
 {% endif %}
-<br>
 {% if page.next %}
-	<a rel="next" href="{{ page.next.url }}">{{ page.next.title }} &rarr;</a>
+	<a rel="next" href="{{ page.next.url }}" style="float: right">{{ page.next.title }} &rarr;</a>
 {% endif %}
 
