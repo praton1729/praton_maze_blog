@@ -88,7 +88,7 @@ Procedure:-
 ## Anon Memory consumption saturation
 
 This method is more detailed/involved and is supposed to provide an accurate number for the launch time. This involves a modified version of
-the readily available utility named `procrank` and our in-house real-time plotter. `procrank` by default covers all the processes in `/proc`
+the readily available utility named `procrank` and a python-based real-time plotter. `procrank` by default covers all the processes in `/proc`
 and computes the memory consumption for each process and also takes in account the shared memory between the processes. For our purposes we
 modify `procrank` to compute the memory consumption of a single process which we provide it as a pid in its argument chain. This version of
 `procrank` prints the `Uss` consumption of the process and the real time plotter plots it on the host.
